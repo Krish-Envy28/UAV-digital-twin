@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAV Engine Digital Twin</title>
+    <!-- Google Fonts: Inter + JetBrains Mono for terminal -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Anime.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Parallax Container -->
+    <div class="parallax-wrapper">
+
+        <!-- Intro Section (Parallax Layer) -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1>UAV PHM Digital Twin</h1>
+                <p>Scroll down to initialize the real-time prognostic health management dashboard.</p>
+                <i class="ph-thin ph-arrow-down arrow-bounce"></i>
+            </div>
+            <!-- Optional parallax background element -->
+            <div class="parallax-bg-layer"></div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section class="dashboard-section" id="dashboard">
+            <!-- Full bleed background overlay -->
+            <div class="dashboard-bg"></div>
+
+            <div class="dashboard-layout">
+                <!-- Top Navigation / Status Bar -->
+                <header class="top-bar glass-panel">
+                    <div class="logo">
+                        <i class="ph-thin ph-airplane-tilt"></i>
+                        <span>AERO // TELEMETRY</span>
+                    </div>
+                    <div class="nav-pill" id="nav-pill">
+                        <span class="active" data-tab="overview">Overview</span>
+                        <span data-tab="analysis">Analysis</span>
+                        <span data-tab="telemetry">Telemetry</span>
+                        <span data-tab="mission">Mission</span>
+                        <span data-tab="what-if">What-If</span>
+                        <span data-tab="recommendation">Recommendation</span>
+                    </div>
+                    <div class="global-status">
+                        <button class="top-btn" id="upload-btn" title="Upload CSV Data">
+                            <i class="ph-thin ph-upload-simple"></i>
+                        </button>
+                        <button class="top-btn" id="speed-toggle" title="Toggle Simulation Speed">
+                            <i class="ph-thin ph-fast-forward"></i>
+                            <span id="speed-indicator" style="font-family:'JetBrains Mono'; font-size:11px; margin-left:4px; color: var(--accent);">10x</span>
+                        </button>
+                        <button class="top-btn active" id="voice-toggle" title="Toggle Voice Alerts">
+                            <i class="ph-thin ph-speaker-high"></i>
+                        </button>
+                        <div class="status-dot healthy" id="status-dot"></div>
+                        <span id="stage-text">SYSTEM HEALTHY</span>
+                    </div>
+                </header>
+
+                <!-- ============================================ -->
+                <!-- ============================================ -->
+                <!-- TAB: OVERVIEW (Default View)                     -->
+                <!-- ============================================ -->
+                <div class="tab-panel active" id="tab-overview">
+                    <div class="main-content">
+                        <!-- Left Column: Key Health Stats -->
+                        <aside class="left-col">
+                            <div class="stat-card glass-panel" id="card-health-idx">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-heartbeat"></i>
+                                    <span>HEALTH INDEX</span>
+                                </div>
+                                <div class="hero-value"><span id="val-health">--</span>%</div>
+                            </div>
+
+                            <div class="stat-card glass-panel" id="card-trend">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-trend-down"></i>
+                                    <span>DEGRADATION TREND</span>
+                                </div>
+                                <div class="stat-value" id="val-stage" style="color: var(--accent); font-size: 14px; margin-top: 8px;">HEALTHY</div>
+                            </div>
+
+                            <div class="stat-card glass-panel" id="card-rul-val">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-timer"></i>
+                                    <span>RUL</span>
+                                </div>
+                                <div class="hero-value"><span id="val-rul">--</span> H</div>
+                                <div class="sub-label">mission-conditioned</div>
+                            </div>
+
+                            <div class="stat-card glass-panel" id="card-confidence">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-brain"></i>
+                                    <span>CONFIDENCE</span>
+                                </div>
+                                <div class="hero-value"><span id="val-confidence">--</span>%</div>
+                            </div>
+                        </aside>
+
+                        <!-- Center: Engine Schematic -->
+                        <main class="center-col">
+                            <div class="engine-container" id="engine-svg-container">
+                                <!-- SVG loaded dynamically via JS -->
+                            </div>
+                        </main>
+
+                        <!-- Right Column: Mission Overview & Recommendations -->
+                        <aside class="right-col">
+                            <div class="insight-card glass-panel hero-card" id="card-mission">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-target"></i>
+                                    <span>MISSION OVERVIEW</span>
+                                </div>
+                                <div class="mission-params">
+                                    <div class="param-row">
+                                        <span>Duration</span>
+                                        <span class="param-val">120 min</span>
+                                    </div>
+                                    <div class="param-row">
+                                        <span>Altitude</span>
+                                        <span class="param-val" id="val-altitude">--</span>
+                                    </div>
+                                    <div class="param-row">
+                                        <span>Throttle</span>
+                                        <span class="param-val" id="val-throttle">--</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="stat-card glass-panel" id="card-risk">
+                                <div class="stat-header">
+                                    <i class="ph-thin ph-warning-circle"></i>
+                                    <span>MISSION RISK</span>
+                                </div>
+                                <div class="stat-value" id="val-risk" style="color: var(--status-healthy); font-size: 18px; margin-top: 8px;">LOW</div>
+                            </div>
+
+                            <div class="recommendation-cta" id="mission-cta">
+                                <div class="cta-badge" id="cta-badge">
+                                    🟢 CONTINUE MISSION
+                                </div>
+                                <div class="cta-reasoning" id="cta-reasoning">
+                                    System nominal. Current load and altitude profiles are well within engine operating limits.
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <!-- Bottom Row: Data Visualizations (Innovations 1, 3, 4) -->
+                    <div class="bottom-content">
+                        <div class="glass-panel" id="card-radar">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-radar"></i>
+                                <span>SYSTEM VITALS</span>
+                            </div>
+                            <div class="chart-wrapper" style="height: 200px;">
+                                <canvas id="radarChart"></canvas>
+                            </div>
+                        </div>
+
+
+
+                        <div class="glass-panel" id="card-raw-sensors" style="flex: 2; display: flex; flex-direction: column;">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-cpu"></i>
+                                <span>LIVE RAW TELEMETRY</span>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; height: 100%; align-items: center;">
+                                <div class="hud-item"><span class="hud-label">RPM</span><span class="hud-value" id="val-raw-rpm">--</span></div>
+                                <div class="hud-item"><span class="hud-label">THR</span><span class="hud-value" id="val-raw-thr">--</span></div>
+                                <div class="hud-item"><span class="hud-label">MAP</span><span class="hud-value" id="val-raw-map">--</span></div>
+                                <div class="hud-item"><span class="hud-label">ALT</span><span class="hud-value" id="val-raw-alt">--</span></div>
+                                <div class="hud-item"><span class="hud-label">AMB T.</span><span class="hud-value" id="val-raw-amb">--</span></div>
+                                <div class="hud-item"><span class="hud-label">EGT</span><span class="hud-value" id="val-raw-egt">--</span></div>
+                                <div class="hud-item"><span class="hud-label">CHT</span><span class="hud-value" id="val-raw-cht">--</span></div>
+                                <div class="hud-item"><span class="hud-label">OIL P.</span><span class="hud-value" id="val-raw-oilp">--</span></div>
+                                <div class="hud-item"><span class="hud-label">OIL T.</span><span class="hud-value" id="val-raw-oilt">--</span></div>
+                                <div class="hud-item"><span class="hud-label">VIB</span><span class="hud-value" id="val-raw-vib">--</span></div>
+                                <div class="hud-item" style="grid-column: span 2;"><span class="hud-label">FUEL F.</span><span class="hud-value" id="val-raw-fuel">--</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <!-- ============================================ -->
+                <!-- TAB: ANALYSIS (Live Charts)                  -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-analysis">
+                    <div class="analysis-grid">
+                        <div class="chart-card glass-panel">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-chart-line-up"></i>
+                                <span>HEALTH INDEX OVER TIME</span>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-health"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card glass-panel">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-warning-octagon"></i>
+                                <span>ANOMALY SCORE OVER TIME</span>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-anomaly"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card glass-panel chart-wide">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-thermometer-hot"></i>
+                                <span>SENSOR READINGS (EGT / CHT / VIBRATION)</span>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="chart-sensors"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB: LOGS (Terminal-Style Event Log)         -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-telemetry">
+                    <div class="logs-container glass-panel">
+                        <div class="logs-header">
+                            <div class="terminal-dots">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                            </div>
+                            <span class="terminal-title">SYSTEM EVENT LOG</span>
+                            <button class="clear-logs-btn" id="clear-logs">CLEAR</button>
+                        </div>
+                        <div class="logs-body" id="logs-body">
+                            <div class="log-line info">[SYSTEM] Awaiting telemetry link...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB: MISSION                                 -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-mission">
+                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="color: rgba(255,255,255,0.8); font-size: 16px; font-weight: normal;">Select a Mission Profile</h2>
+                        <button id="clear-mission-btn" class="action-btn" style="display: none;" onclick="clearMission()">Clear Selection</button>
+                    </div>
+                    <div class="mission-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem;">
+                        <div class="glass-panel mission-card" style="padding: 2rem; cursor: pointer; transition: 0.3s;" onclick="selectMission('Agriculture Field Monitoring', 'Low Load, Steady Altitude', 70)">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-plant"></i>
+                                <span>Agriculture Field Monitoring</span>
+                            </div>
+                            <p style="color: rgba(255,255,255,0.7); margin-top: 15px;">A low-stress mission flying at steady low altitudes to survey crop health.</p>
+                            <div style="margin-top: 15px; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+                                <div>Duration: 180 min</div>
+                                <div>Target Alt: 500 m</div>
+                            </div>
+                        </div>
+                        <div class="glass-panel mission-card" style="padding: 2rem; cursor: pointer; transition: 0.3s;" onclick="selectMission('Enemy Base Scout Mission', 'High Load, Variable Altitude', 95)">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-crosshair"></i>
+                                <span>Enemy Base Scout Mission</span>
+                            </div>
+                            <p style="color: rgba(255,255,255,0.7); margin-top: 15px;">High-risk tactical scouting requiring evasive maneuvers, high speed, and varying altitude.</p>
+                            <div style="margin-top: 15px; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+                                <div>Duration: 240 min</div>
+                                <div>Target Alt: 4000 m</div>
+                            </div>
+                        </div>
+                        <div class="glass-panel mission-card" style="padding: 2rem; cursor: pointer; transition: 0.3s;" onclick="selectMission('Rescue Scout Mission', 'Max Load, Rapid Ascent', 100)">
+                            <div class="stat-header">
+                                <i class="ph-thin ph-first-aid"></i>
+                                <span>Rescue Scout Mission</span>
+                            </div>
+                            <p style="color: rgba(255,255,255,0.7); margin-top: 15px;">Emergency response mission with maximum engine load and rapid altitude climbs.</p>
+                            <div style="margin-top: 15px; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+                                <div>Duration: 90 min</div>
+                                <div>Target Alt: 2500 m</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB: WHAT-IF                                 -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-what-if">
+                    <div class="glass-panel" style="padding: 2rem;">
+                        <div class="stat-header">
+                            <i class="ph-thin ph-git-branch"></i>
+                            <span>WHAT-IF SCENARIOS</span>
+                        </div>
+                        <p id="whatif-desc" style="color: rgba(255,255,255,0.7); margin: 15px 0;">Please select a mission from the Mission tab to view scenarios.</p>
+                        
+                        <div class="whatif-table" id="whatif-table-full" style="width: 100%; max-width: 800px; display: none;">
+                            <div class="whatif-row header-row" style="font-size: 14px;">
+                                <span>PARAMETER</span>
+                                <span>CURRENT TELEMETRY</span>
+                                <span>ACTIVE MISSION PROFILE</span>
+                                <span>ALTERNATIVE (REDUCED LOAD)</span>
+                            </div>
+                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
+                                <span class="label">Engine Load</span>
+                                <span id="wif-load-cur">--%</span>
+                                <span id="wif-load-mis" style="color: var(--status-warning);">--%</span>
+                                <span class="alt-val">70%</span>
+                            </div>
+                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
+                                <span class="label">Projected RUL</span>
+                                <span id="wif-rul-cur">-- h</span>
+                                <span id="wif-rul-mis" style="color: var(--status-critical);">-- h</span>
+                                <span class="alt-val" id="wif-rul-alt">-- h</span>
+                            </div>
+                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
+                                <span class="label">Mission Success Prob.</span>
+                                <span id="wif-prob-cur">--%</span>
+                                <span id="wif-prob-mis" style="color: var(--status-critical);">--%</span>
+                                <span class="alt-val" id="wif-prob-alt">--%</span>
+                            </div>
+                            
+                            <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                                <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px;">GENERATED SCENARIOS FOR MISSION</h3>
+                                <ul id="whatif-scenario-list" style="color: rgba(255,255,255,0.8); line-height: 1.6; padding-left: 20px; font-size: 14px;">
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB: RECOMMENDATION                          -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-recommendation">
+                    <div class="glass-panel" style="padding: 2rem;">
+                        <div class="stat-header">
+                            <i class="ph-thin ph-clipboard-text"></i>
+                            <span>AI RECTIFICATION STEPS</span>
+                        </div>
+                        <div class="rectification-steps" id="rectification-steps" style="margin-top: 20px;">
+                            <h2 id="rect-status" style="color: var(--status-healthy);">SYSTEM NOMINAL</h2>
+                            <p id="rect-desc" style="color: rgba(255,255,255,0.7); margin-top: 10px;">No corrective actions required at this time.</p>
+                            
+                            <ul id="rect-list" style="margin-top: 20px; list-style: none; padding: 0; display: none; gap: 15px; flex-direction: column;">
+                                <li style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                                    <strong style="color: var(--accent);">STEP 1:</strong> <span id="rect-step1">Reduce throttle to 70%.</span>
+                                </li>
+                                <li style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                                    <strong style="color: var(--accent);">STEP 2:</strong> <span id="rect-step2">Decrease altitude to lower engine strain.</span>
+                                </li>
+                                <li style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+                                    <strong style="color: var(--accent);">STEP 3:</strong> <span id="rect-step3">Reroute to nearest safe landing zone if RUL drops below mission duration.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Upload Overlay -->
+    <div class="upload-overlay" id="upload-overlay">
+        <div class="upload-modal glass-panel">
+            <button class="upload-close" id="upload-close">
+                <i class="ph-thin ph-x"></i>
+            </button>
+            <div class="upload-dropzone" id="upload-dropzone">
+                <i class="ph-thin ph-cloud-arrow-up upload-icon"></i>
+                <h2>Upload Flight Data</h2>
+                <p>Drag & drop a CSV file here, or click to browse</p>
+                <p class="upload-hint">Columns: rpm, throttle, map, altitude, ambient_temp, egt, cht, oil_pressure, oil_temp, vibration, fuel_flow, engine_hours</p>
+                <input type="file" id="csv-file-input" accept=".csv" hidden>
+            </div>
+            <div class="upload-controls" id="upload-controls" style="display:none;">
+                <div class="upload-file-info">
+                    <i class="ph-thin ph-file-csv"></i>
+                    <span id="upload-filename">---</span>
+                    <span id="upload-rows">0 rows</span>
+                </div>
+                <div class="speed-control">
+                    <label>Stream Speed:</label>
+                    <select id="stream-speed">
+                        <option value="2000">0.5x (Slow)</option>
+                        <option value="1000" selected>1x (Normal)</option>
+                        <option value="500">2x (Fast)</option>
+                        <option value="100">10x (Turbo)</option>
+                        <option value="0">Instant</option>
+                    </select>
+                </div>
+                <button class="upload-start-btn" id="upload-start">START STREAMING</button>
+            </div>
+            <div class="upload-progress" id="upload-progress" style="display:none;">
+                <div class="progress-track"><div class="progress-fill" id="upload-prog-bar" style="background: var(--accent-primary);"></div></div>
+                <span id="upload-prog-text">0 / 0 readings sent</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
