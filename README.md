@@ -32,11 +32,11 @@ A real-time UAV piston engine health monitoring system that uses a **Digital Twi
    ```
 3. Clone (download) the repo:
    ```
-   git clone <your-repo-url>
+   git clone https://github.com/Krish-Envy28/UAV-digital-twin.git
    ```
-4. A folder named `UAV` will be created. Now open it in VS Code:
+4. A folder named `UAV-digital-twin` will be created. Now open it in VS Code:
    ```
-   cd UAV
+   cd UAV-digital-twin
    code .
    ```
    This will launch VS Code with the project loaded.
