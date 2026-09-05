@@ -23,13 +23,23 @@ A real-time UAV piston engine health monitoring system that uses a **Digital Twi
 
 ### Setup (Step by Step)
 
-**Step 1:** Clone the repo and open it in VS Code
+**Step 1:** Download the project
 
-```
-git clone <your-repo-url>
-cd UAV
-code .
-```
+1. Open **Command Prompt** on your PC (press `Win + R`, type `cmd`, hit Enter)
+2. Navigate to the folder where you want to keep the project. For example:
+   ```
+   cd E:\Project
+   ```
+3. Clone (download) the repo:
+   ```
+   git clone <your-repo-url>
+   ```
+4. A folder named `UAV` will be created. Now open it in VS Code:
+   ```
+   cd UAV
+   code .
+   ```
+   This will launch VS Code with the project loaded.
 
 **Step 2:** Open the **integrated terminal** inside VS Code
 
@@ -80,6 +90,7 @@ This will:
 
 ```
 UAV/
+├── README.md                # This file
 ├── start_demo.bat           # One-click demo launcher
 ├── demo_stream.py           # Streams telemetry data to the API
 ├── demo.py                  # Interactive CLI demo walkthrough
@@ -113,7 +124,13 @@ UAV/
 │
 ├── 3D/                      # SVG sensor/engine assets
 │
-└── docs/                    # Reports & documentation
+└── docs/                    # Reports, specs & documentation
+    ├── design idea.md
+    ├── innovations.md
+    ├── phase1a-telemetry-digital-twin-spec.md
+    ├── phase1a_progress_report.md
+    ├── phase1b_progress_report.md
+    └── Phase1A_Progress_Report.pdf
 ```
 
 ## Other Commands
