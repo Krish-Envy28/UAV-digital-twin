@@ -388,11 +388,89 @@ def generate_dataset(
 
 
 # ---------------------------------------------------------------------------
+# Mission Risk Dataset generation (Phase B)
+# ---------------------------------------------------------------------------
+import csv
+from ml.labeling_policy import label_mission_risk
+
+def generate_mission_dataset(output_path: str | Path = "data/mission_dataset.csv", n_rows: int = 5000, seed: int = 42):
+    """Generates synthetic scenarios for training the XGBoost Mission Risk model."""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    
+    headers = [
+        "health_index", "rul_hours", "degradation_rate", "anomaly_severity", 
+        "egt_deviation", "cht_deviation", "oil_pressure_deviation", 
+        "vibration_deviation", "mission_duration", "mission_altitude", 
+        "engine_load", "label"
+    ]
+    
+    with open(output_path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        
+        for _ in range(n_rows):
+            # 1. Synthesize mission params
+            mission_duration = rng.uniform(30.0, 300.0) # 30 mins to 5 hours
+            mission_altitude = rng.uniform(0.0, 15000.0) # ft
+            engine_load = rng.uniform(40.0, 100.0) # %
+            
+            # 2. Synthesize engine health
+            # More likely to be healthy (skewed distribution)
+            health_index = min(100.0, max(0.0, rng.normal(80.0, 30.0)))
+            
+            # RUL roughly correlates with health, but add some noise
+            # Assume max 1800h, but usually much lower if health is low
+            max_rul = 1800 * (health_index / 100.0)
+            rul_hours = max(0.0, rng.normal(max_rul, 200.0))
+            
+            degradation_rate = max(0.0, rng.exponential(0.02))
+            anomaly_severity = max(0.0, rng.exponential(0.1)) if health_index < 90 else 0.0
+            
+            # 3. Synthesize physical deviations
+            # Healthy = near 0, degraded = higher
+            sev = (100.0 - health_index) / 100.0
+            egt_deviation = rng.normal(sev * 55.0, 5.0)
+            cht_deviation = rng.normal(sev * 30.0, 3.0)
+            oil_pressure_deviation = rng.normal(sev * -18.0, 2.0)
+            vibration_deviation = max(0.0, rng.normal(sev * 2.5, 0.5))
+            
+            row = {
+                "health_index": round(health_index, 2),
+                "rul_hours": round(rul_hours, 1),
+                "degradation_rate": round(degradation_rate, 4),
+                "anomaly_severity": round(anomaly_severity, 3),
+                "egt_deviation": round(egt_deviation, 1),
+                "cht_deviation": round(cht_deviation, 1),
+                "oil_pressure_deviation": round(oil_pressure_deviation, 1),
+                "vibration_deviation": round(vibration_deviation, 3),
+                "mission_duration": round(mission_duration, 1),
+                "mission_altitude": round(mission_altitude, 0),
+                "engine_load": round(engine_load, 1),
+            }
+            
+            # Add label
+            row["label"] = label_mission_risk(row)
+            writer.writerow(row)
+            
+    print(f"  [OK] Generated {output_path} ({n_rows} scenarios)")
+    return output_path
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print("Generating Phase 1A synthetic telemetry dataset...\n")
-    result = generate_dataset()
-    print(f"\nDone.  Healthy: {len(result['healthy_files'])},  "
-          f"Trajectory: {len(result['trajectory_files'])}")
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "mission":
+        print("Generating Mission Risk dataset...")
+        generate_mission_dataset()
+        print("\nDone.")
+    else:
+        print("Generating Phase 1A synthetic telemetry dataset...\n")
+        result = generate_dataset()
+        print(f"\nDone.  Healthy: {len(result['healthy_files'])},  "
+              f"Trajectory: {len(result['trajectory_files'])}")
+

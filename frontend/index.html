@@ -147,6 +147,8 @@
                                     <span>MISSION RISK</span>
                                 </div>
                                 <div class="stat-value" id="val-risk" style="color: var(--status-healthy); font-size: 18px; margin-top: 8px;">LOW</div>
+                                <div id="risk-drivers" style="margin-top: 10px; font-size: 11px; display: none; flex-direction: column; gap: 4px; font-family: 'JetBrains Mono', monospace; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                                </div>
                             </div>
 
                             <div class="recommendation-cta" id="mission-cta">
@@ -375,40 +377,34 @@
                     <div class="glass-panel" style="padding: 2rem;">
                         <div class="stat-header">
                             <i class="ph-thin ph-git-branch"></i>
-                            <span>WHAT-IF SCENARIOS</span>
+                            <span>COUNTERFACTUAL SCENARIO ANALYSIS</span>
                         </div>
                         <p id="whatif-desc" style="color: rgba(255,255,255,0.7); margin: 15px 0;">Please select a mission from the Mission tab to view scenarios.</p>
                         
-                        <div class="whatif-table" id="whatif-table-full" style="width: 100%; max-width: 800px; display: none;">
-                            <div class="whatif-row header-row" style="font-size: 14px;">
-                                <span>PARAMETER</span>
-                                <span>CURRENT TELEMETRY</span>
-                                <span>ACTIVE MISSION PROFILE</span>
-                                <span>ALTERNATIVE (REDUCED LOAD)</span>
+                        <div id="whatif-container" style="display: none;">
+                            <!-- Controls Area -->
+                            <div id="whatif-controls" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+                                <!-- Scenarios will be injected here via JS -->
                             </div>
-                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
-                                <span class="label">Engine Load</span>
-                                <span id="wif-load-cur">--%</span>
-                                <span id="wif-load-mis" style="color: var(--status-warning);">--%</span>
-                                <span class="alt-val">70%</span>
+                            <button id="btn-add-scenario" style="padding: 10px 15px; background: rgba(255,255,255,0.1); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; cursor: pointer; margin-bottom: 20px; font-family: 'JetBrains Mono', monospace;">+ ADD WHAT-IF SCENARIO</button>
+
+                            <!-- Comparison Table -->
+                            <div style="overflow-x: auto; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 15px;">
+                                <table id="whatif-comparison-table" style="width: 100%; text-align: left; border-collapse: collapse; font-family: 'JetBrains Mono', monospace; font-size: 14px;">
+                                    <thead>
+                                        <tr id="whatif-table-head" style="border-bottom: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.6);">
+                                            <th style="padding: 12px;">PARAMETER</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="whatif-table-body">
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
-                                <span class="label">Projected RUL</span>
-                                <span id="wif-rul-cur">-- h</span>
-                                <span id="wif-rul-mis" style="color: var(--status-critical);">-- h</span>
-                                <span class="alt-val" id="wif-rul-alt">-- h</span>
-                            </div>
-                            <div class="whatif-row" style="font-size: 16px; margin: 10px 0;">
-                                <span class="label">Mission Success Prob.</span>
-                                <span id="wif-prob-cur">--%</span>
-                                <span id="wif-prob-mis" style="color: var(--status-critical);">--%</span>
-                                <span class="alt-val" id="wif-prob-alt">--%</span>
-                            </div>
-                            
-                            <div style="margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
-                                <h3 style="color: var(--accent); font-size: 14px; margin-bottom: 10px;">GENERATED SCENARIOS FOR MISSION</h3>
-                                <ul id="whatif-scenario-list" style="color: rgba(255,255,255,0.8); line-height: 1.6; padding-left: 20px; font-size: 14px;">
-                                </ul>
+
+                            <!-- Reason Display -->
+                            <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-left: 3px solid var(--accent);">
+                                <strong style="color: var(--accent); font-size: 12px; letter-spacing: 1px;">AI REASONING (SELECTED SCENARIO):</strong>
+                                <p id="whatif-reason-text" style="margin-top: 8px; color: rgba(255,255,255,0.9); line-height: 1.5; font-size: 14px;">Evaluating...</p>
                             </div>
                         </div>
                     </div>
