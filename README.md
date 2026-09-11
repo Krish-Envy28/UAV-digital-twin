@@ -10,6 +10,7 @@ A real-time UAV piston engine health monitoring system that uses a **Digital Twi
 - **Fault Classification** — Identifies degradation stage (healthy → critical)
 - **RUL Estimation** — Predicts remaining useful life with confidence intervals
 - **Health Index** — Single 0–100% score for engine health
+- **Counterfactual Mission Planning** — "What-If" scenario builder to dynamically adjust load and altitude and predict mission risk
 - **Live Dashboard** — Real-time web UI with WebSocket streaming, 3D engine visualization, and sensor charts
 
 ## Quick Start
@@ -113,6 +114,9 @@ UAV/
 │   ├── rul_estimator.py     # Remaining Useful Life estimator
 │   ├── health_index.py      # Health index calculation
 │   ├── phm_core.py          # Unified PHM pipeline
+│   ├── counterfactual.py    # Counterfactual engine for mission "What-If" scenarios
+│   ├── reference/
+│   │   └── engine_limits.py # Lycoming operating constraints source-of-truth
 │   └── artifacts/           # Pre-trained model files (.joblib)
 │
 ├── simulation/              # Synthetic telemetry generator
