@@ -475,8 +475,8 @@ document.addEventListener("DOMContentLoaded", () => {
         updateLogs(data);
         voiceAssistant.onTelemetry(data.phm);
         
-        if (window.updateWhatIfAndRecommendation) {
-            window.updateWhatIfAndRecommendation();
+        if (window.triggerWhatIfUpdate) {
+            window.triggerWhatIfUpdate();
         }
     };
 
@@ -1031,51 +1031,121 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     // 12. Mission, What-If, and Recommendation Logic
     // ==========================================
+    // ==========================================
+    // 12. Mission, What-If, and Counterfactual Logic
+    // ==========================================
     let activeMission = null;
+    let whatIfAlternatives = [];
+
+    function renderWhatIfControls() {
+        const container = document.getElementById('whatif-controls');
+        if (!container) return;
+        
+        let html = '';
+        
+        // Original Mission Controls (read-only)
+        html += `
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; min-width: 200px;">
+            <h4 style="color: var(--accent); margin-top: 0;">Original Mission</h4>
+            <div style="margin-top: 10px;">
+                <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Duration (min)</label>
+                <input type="number" value="${activeMission.duration}" disabled style="width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:white; padding:5px; margin-bottom:10px;">
+                
+                <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Altitude (m)</label>
+                <input type="number" value="${activeMission.altitude}" disabled style="width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:white; padding:5px; margin-bottom:10px;">
+                
+                <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Load (%)</label>
+                <input type="number" value="${activeMission.load}" disabled style="width:100%; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:white; padding:5px;">
+            </div>
+        </div>`;
+        
+        // Alternative Scenarios
+        whatIfAlternatives.forEach((alt, index) => {
+            html += `
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; flex: 1; min-width: 200px;">
+                <h4 style="color: white; margin-top: 0;">Alternative ${index + 1}</h4>
+                <div style="margin-top: 10px;">
+                    <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Duration (min)</label>
+                    <input type="number" value="${alt.duration}" onchange="updateAlternative(${index}, 'duration', this.value)" style="width:100%; background:transparent; border:1px solid var(--accent); color:white; padding:5px; margin-bottom:10px;">
+                    
+                    <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Altitude (m)</label>
+                    <input type="number" value="${alt.altitude}" onchange="updateAlternative(${index}, 'altitude', this.value)" style="width:100%; background:transparent; border:1px solid var(--accent); color:white; padding:5px; margin-bottom:10px;">
+                    
+                    <label style="display:block; font-size:12px; color:rgba(255,255,255,0.6);">Load (%)</label>
+                    <input type="number" value="${alt.load}" onchange="updateAlternative(${index}, 'load', this.value)" style="width:100%; background:transparent; border:1px solid var(--accent); color:white; padding:5px;">
+                </div>
+            </div>`;
+        });
+        
+        container.innerHTML = html;
+        
+        const btn = document.getElementById('btn-add-scenario');
+        if (whatIfAlternatives.length >= 3) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'inline-block';
+        }
+    }
+
+    window.updateAlternative = function(index, field, value) {
+        whatIfAlternatives[index][field] = parseFloat(value);
+        triggerWhatIfUpdate();
+    };
+
+    document.getElementById('btn-add-scenario')?.addEventListener('click', () => {
+        if (whatIfAlternatives.length >= 3) return;
+        const base = whatIfAlternatives.length > 0 ? whatIfAlternatives[whatIfAlternatives.length - 1] : activeMission;
+        whatIfAlternatives.push({
+            duration: base.duration,
+            altitude: base.altitude,
+            load: Math.max(10, base.load - 10)
+        });
+        renderWhatIfControls();
+        triggerWhatIfUpdate();
+    });
 
     window.selectMission = function(title, desc, load) {
-        activeMission = { title, desc, load };
+        activeMission = { title, desc, load: parseFloat(load) };
         document.getElementById('whatif-desc').textContent = `Mission Selected: ${title}`;
-        document.getElementById('whatif-table-full').style.display = 'block';
+        document.getElementById('whatif-container').style.display = 'block';
         document.getElementById('clear-mission-btn').style.display = 'inline-block';
         
         const cards = document.querySelectorAll('.mission-card');
         cards.forEach(c => c.style.border = '1px solid rgba(255,255,255,0.1)');
-        
-        // Highlight active
         event.currentTarget.style.border = '1px solid var(--accent-primary)';
         
-        // Generate scenarios based on mission
-        const scenarioList = document.getElementById('whatif-scenario-list');
-        scenarioList.innerHTML = '';
-        
         if (title.includes('Agriculture')) {
-            scenarioList.innerHTML += '<li><strong>If payload weight increases by 20% (e.g. heavier camera):</strong> Throttle will need to increase by ~8%, reducing RUL by 3 hours.</li>';
-            scenarioList.innerHTML += '<li><strong>If wind speed increases to 25 knots:</strong> Mission Stability drops to 65%. Engine load increases dynamically to maintain steady altitude.</li>';
+            activeMission.duration = 180;
+            activeMission.altitude = 500;
         } else if (title.includes('Enemy Base')) {
-            scenarioList.innerHTML += '<li><strong>If evasive maneuvers are required:</strong> Sharp spikes in RPM and CHT will occur. Risk of sudden component failure increases by 15%.</li>';
-            scenarioList.innerHTML += '<li><strong>If altitude drops to 1000m to evade radar:</strong> Air density increases, providing more lift but exposing the UAV to higher ambient temperatures, potentially overheating the oil.</li>';
+            activeMission.duration = 240;
+            activeMission.altitude = 4000;
         } else if (title.includes('Rescue')) {
-            scenarioList.innerHTML += '<li><strong>If mission duration extends by 30 mins (target search prolonged):</strong> The continuous max load will push RUL to critically low levels before return. Suggest carrying auxiliary fuel tanks.</li>';
-            scenarioList.innerHTML += '<li><strong>If rapid ascent to 4000m is needed to clear mountains:</strong> Engine will run at 100% throttle for 8 minutes, spiking EGT. Immediate cooling glide path recommended afterwards.</li>';
+            activeMission.duration = 90;
+            activeMission.altitude = 2500;
         }
-
-        window.updateWhatIfAndRecommendation();
+        
+        whatIfAlternatives = [{
+            duration: activeMission.duration,
+            altitude: activeMission.altitude,
+            load: activeMission.load > 70 ? 70 : activeMission.load - 10
+        }];
+        
+        renderWhatIfControls();
+        triggerWhatIfUpdate();
+        
         if(voiceAssistant) voiceAssistant.speak(`Selected mission profile: ${title}. Preparing what if scenarios.`);
     };
 
     window.clearMission = function() {
         activeMission = null;
+        whatIfAlternatives = [];
         document.getElementById('whatif-desc').textContent = 'Please select a mission from the Mission tab to view scenarios.';
-        document.getElementById('whatif-table-full').style.display = 'none';
+        document.getElementById('whatif-container').style.display = 'none';
         document.getElementById('clear-mission-btn').style.display = 'none';
         
         const cards = document.querySelectorAll('.mission-card');
         cards.forEach(c => c.style.border = '1px solid rgba(255,255,255,0.1)');
-        
-        // Clear scenarios
-        const scenarioList = document.getElementById('whatif-scenario-list');
-        if (scenarioList) scenarioList.innerHTML = '';
         
         // Reset Recommendation Tab
         const rectStatus = document.getElementById('rect-status');
@@ -1090,68 +1160,143 @@ document.addEventListener("DOMContentLoaded", () => {
         window.hasSpokenRecommendation = false;
     };
 
-    window.updateWhatIfAndRecommendation = function() {
+    // Debounce to prevent lag
+    let whatIfTimeout = null;
+    window.triggerWhatIfUpdate = function() {
+        if (whatIfTimeout) clearTimeout(whatIfTimeout);
+        whatIfTimeout = setTimeout(() => {
+            window.updateWhatIfAndRecommendation();
+        }, 300);
+    };
+
+    window.updateWhatIfAndRecommendation = async function() {
         if (!activeMission || !window.currentData) return;
         
         const phm = window.currentData.phm;
         
-        // Populate What-If Table
-        document.getElementById('wif-load-cur').textContent = `${window.currentData.raw.throttle.toFixed(1)}%`;
-        document.getElementById('wif-load-mis').textContent = `${activeMission.load}%`;
+        const engine_state = {
+            health_index: phm.health_index,
+            rul_hours: phm.rul_hours,
+            degradation_rate: phm.degradation_rate || 0.0,
+            anomaly_score: phm.anomaly_score,
+            confidence: window.currentData.phm.anomaly_score < 0.5 ? 0.9 : 0.4
+        };
         
-        // Simulate probability and RUL drop based on load differences
-        const loadDiff = activeMission.load - window.currentData.raw.throttle;
-        let misRul = phm.rul_hours - (loadDiff > 0 ? (loadDiff * 0.5) : 0);
-        if (misRul < 0) misRul = 0.5;
+        const original_mission = {
+            duration_minutes: activeMission.duration,
+            target_altitude: activeMission.altitude,
+            engine_load_pct: activeMission.load
+        };
         
-        let misProb = 100 - phm.anomaly_score * 100 - (loadDiff > 0 ? loadDiff * 0.3 : 0);
-        if (misProb < 10) misProb = 10;
-        
-        let altRul = phm.rul_hours + 15; // Simulated bonus for flying at 70%
-        let altProb = 100 - phm.anomaly_score * 50;
-        if (altProb > 99) altProb = 99;
+        const alternativesPayload = whatIfAlternatives.map(alt => ({
+            duration_minutes: alt.duration,
+            target_altitude: alt.altitude,
+            engine_load_pct: alt.load
+        }));
 
-        document.getElementById('wif-rul-cur').textContent = `${phm.rul_hours.toFixed(1)} h`;
-        document.getElementById('wif-rul-mis').textContent = `${misRul.toFixed(1)} h`;
-        document.getElementById('wif-rul-alt').textContent = `${altRul.toFixed(1)} h`;
-        
-        document.getElementById('wif-prob-cur').textContent = `${(100 - phm.anomaly_score * 100).toFixed(0)}%`;
-        document.getElementById('wif-prob-mis').textContent = `${misProb.toFixed(0)}%`;
-        document.getElementById('wif-prob-alt').textContent = `${altProb.toFixed(0)}%`;
-
-        // Update Recommendation Tab
-        const rectStatus = document.getElementById('rect-status');
-        const rectDesc = document.getElementById('rect-desc');
-        const rectList = document.getElementById('rect-list');
-        
-        if (phm.anomaly || phm.degradation_stage === "critical" || phm.degradation_stage === "progressive_degradation") {
-            rectStatus.textContent = "CRITICAL ACTION REQUIRED";
-            rectStatus.style.color = "var(--status-critical)";
-            rectDesc.textContent = `Mission "${activeMission.title}" has a high probability of engine failure (${misProb.toFixed(0)}% success rate). Executing AI Rectification protocol.`;
-            rectList.style.display = "flex";
+        try {
+            // Call /what-if (Counterfactual)
+            const resWhatIf = await fetch('/api/mission/what-if', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ engine_state, original_mission, alternatives: alternativesPayload })
+            });
+            const dataWhatIf = await resWhatIf.json();
             
-            const step1Text = `Reduce throttle to 70% immediately to extend RUL to ${altRul.toFixed(1)}h.`;
-            let step2Text = `Decrease altitude to lower engine strain.`;
-            
-            if (activeMission.title === "Rescue Scout Mission") {
-                step2Text = `Warning: This is a time-sensitive mission. Dispatch backup UAV to sector immediately.`;
-            }
-            
-            document.getElementById('rect-step1').textContent = step1Text;
-            document.getElementById('rect-step2').textContent = step2Text;
-
-            if (!window.hasSpokenRecommendation) {
-                if (voiceAssistant) {
-                    voiceAssistant.speak(`Critical Action Required. Step 1: ${step1Text}. Step 2: ${step2Text}.`);
+            if (dataWhatIf.scenarios) {
+                // Render Table Head
+                const tHead = document.getElementById('whatif-table-head');
+                let headHtml = '<th style="padding: 12px; border-right: 1px solid rgba(255,255,255,0.1);">PARAMETER</th>';
+                dataWhatIf.scenarios.forEach(scen => {
+                    const isBest = scen.label === dataWhatIf.best_alternative;
+                    const bg = isBest ? 'background: rgba(76, 175, 80, 0.2);' : '';
+                    const color = isBest ? 'color: var(--status-healthy);' : '';
+                    headHtml += `<th style="padding: 12px; text-align: center; ${bg} ${color}">${scen.label.toUpperCase()}${isBest ? ' ★' : ''}</th>`;
+                });
+                tHead.innerHTML = headHtml;
+                
+                // Render Table Body
+                const tBody = document.getElementById('whatif-table-body');
+                let bodyHtml = '';
+                
+                const rows = [
+                    { label: "Duration (min)", key: "duration_minutes" },
+                    { label: "Altitude (m)", key: "altitude_m" },
+                    { label: "Load (%)", key: "load_pct" },
+                    { label: "Risk Level", isRisk: true },
+                    { label: "Recommendation", isRec: true }
+                ];
+                
+                rows.forEach(r => {
+                    bodyHtml += `<tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">`;
+                    bodyHtml += `<td style="padding: 12px; border-right: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.7);">${r.label}</td>`;
+                    
+                    dataWhatIf.scenarios.forEach(scen => {
+                        const isBest = scen.label === dataWhatIf.best_alternative;
+                        const bg = isBest ? 'background: rgba(76, 175, 80, 0.05);' : '';
+                        
+                        let val = '';
+                        if (r.key) val = scen.params[r.key];
+                        else if (r.isRisk) {
+                            val = scen.result.risk_level;
+                            let color = "var(--status-healthy)";
+                            if (val === "CRITICAL" || val === "HIGH") color = "var(--status-critical)";
+                            else if (val === "MODERATE") color = "var(--status-warning)";
+                            val = `<span style="color: ${color}; font-weight: bold;">${val}</span>`;
+                        }
+                        else if (r.isRec) val = scen.result.recommendation.replace(/_/g, ' ');
+                        
+                        bodyHtml += `<td style="padding: 12px; text-align: center; ${bg}">${val}</td>`;
+                    });
+                    
+                    bodyHtml += `</tr>`;
+                });
+                
+                tBody.innerHTML = bodyHtml;
+                
+                // Render Reason
+                let bestScen = dataWhatIf.scenarios.find(s => s.label === dataWhatIf.best_alternative) || dataWhatIf.scenarios[0];
+                document.getElementById('whatif-reason-text').textContent = bestScen.result.reason;
+                
+                // Also update the analyze endpoints and recommendation tab based on Original
+                const origScen = dataWhatIf.scenarios[0];
+                
+                const riskEl = document.getElementById("val-risk");
+                if (riskEl) {
+                    riskEl.innerText = origScen.result.risk_level;
+                    if (origScen.result.risk_level === "HIGH") riskEl.style.color = "var(--status-critical)";
+                    else if (origScen.result.risk_level === "MODERATE") riskEl.style.color = "var(--status-warning)";
+                    else riskEl.style.color = "var(--status-healthy)";
                 }
-                window.hasSpokenRecommendation = true;
+                
+                const rectStatus = document.getElementById('rect-status');
+                const rectDesc = document.getElementById('rect-desc');
+                const rectList = document.getElementById('rect-list');
+                
+                if (origScen.result.risk_level === "HIGH" || origScen.result.risk_level === "MODERATE") {
+                    rectStatus.textContent = "ACTION REQUIRED";
+                    rectStatus.style.color = "var(--status-warning)";
+                    rectDesc.textContent = `Mission "${activeMission.title}" has elevated risk. AI recommends the following counterfactual adjustments:`;
+                    rectList.style.display = "flex";
+                    
+                    document.getElementById('rect-step1').textContent = `Recommended Action: ${bestScen.result.recommendation.replace(/_/g, ' ')} (${bestScen.label})`;
+                    document.getElementById('rect-step2').textContent = `Reason: ${bestScen.result.reason}`;
+                    document.getElementById('rect-step3').textContent = `Expected Effect: Lowers risk score to ${bestScen.result.risk_score.toFixed(0)}/100`;
+                    
+                    if (!window.hasSpokenRecommendation && window.voiceAssistant) {
+                        window.voiceAssistant.speak(`Action Required. ${bestScen.result.reason}`);
+                        window.hasSpokenRecommendation = true;
+                    }
+                } else {
+                    rectStatus.textContent = "SYSTEM NOMINAL";
+                    rectStatus.style.color = "var(--status-healthy)";
+                    rectDesc.textContent = `No corrective actions required. Mission "${activeMission.title}" is viable.`;
+                    rectList.style.display = "none";
+                    window.hasSpokenRecommendation = false;
+                }
             }
-        } else {
-            rectStatus.textContent = "SYSTEM NOMINAL";
-            rectStatus.style.color = "var(--status-healthy)";
-            rectDesc.textContent = `No corrective actions required. Mission "${activeMission.title}" is viable.`;
-            rectList.style.display = "none";
-            window.hasSpokenRecommendation = false;
+        } catch (e) {
+            console.error("Failed to fetch mission API", e);
         }
     };
 });

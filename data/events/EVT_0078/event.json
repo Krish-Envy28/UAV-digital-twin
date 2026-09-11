@@ -1,0 +1,46 @@
+{
+    "event_id": "EVT_0078",
+    "timestamp": "1970-01-01T05:33:30",
+    "recorded_at": "2026-09-11T15:18:47.985814",
+    "affected_components": [
+        {
+            "sensor_id": "cht",
+            "sensor_name": "CHT Sensor",
+            "z_score": 3.5425
+        }
+    ],
+    "affected_component": {
+        "sensor_id": "cht",
+        "sensor_name": "CHT Sensor",
+        "parameter": "cht",
+        "component": "CHT Sensor"
+    },
+    "anomaly": {
+        "detected": true,
+        "score": 0.9843,
+        "z_score": 3.5425
+    },
+    "health": {
+        "health_index": 85.07,
+        "rul": 609.72,
+        "degradation_stage": "healthy"
+    },
+    "sensor_data": {
+        "rpm": 3374.1,
+        "throttle": 65.1,
+        "map": 52.5,
+        "altitude": 7989.0,
+        "ambient_temp": -0.8,
+        "egt": 680.6,
+        "cht": 182.9,
+        "oil_pressure": 47.4,
+        "oil_temp": 72.9,
+        "vibration": 0.455,
+        "fuel_flow": 11.89,
+        "engine_hours": 231.4
+    },
+    "image": {
+        "snapshot": "snapshot.svg"
+    },
+    "event_status": "closed"
+}

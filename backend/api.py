@@ -17,6 +17,13 @@ from ml.digital_twin import DigitalTwin
 from backend.residual import ResidualEngine
 from ml.phm_core import PHMCore
 from backend.event_manager import event_manager
+import xgboost as xgb
+import json
+import pandas as pd
+from backend.residual import ResidualEngine
+from ml.phm_core import PHMCore
+from backend.event_manager import event_manager
+from ml.counterfactual import evaluate_mission_scenario
 
 
 app = FastAPI(title="UAV Digital Twin - Phase 2 API")
@@ -34,6 +41,22 @@ print("Loading ML models...")
 twin = DigitalTwin.load()
 residual_engine = ResidualEngine.from_file()
 phm = PHMCore.load()
+
+mission_model_path = Path(__file__).parent.parent / "ml" / "artifacts" / "mission_risk_model.json"
+mission_meta_path = Path(__file__).parent.parent / "ml" / "artifacts" / "mission_risk_model.meta.json"
+
+mission_risk_model = None
+mission_features = []
+mission_importances = {}
+
+if mission_model_path.exists():
+    mission_risk_model = xgb.XGBClassifier()
+    mission_risk_model.load_model(str(mission_model_path))
+    with open(mission_meta_path, "r") as f:
+        meta = json.load(f)
+        mission_features = meta["features"]
+        mission_importances = meta["importances"]
+
 print("Models loaded successfully.")
 
 # ---- WebSocket Connection Manager ----
@@ -157,6 +180,149 @@ def get_event_image(event_id: str):
     if image_path.exists():
         return FileResponse(image_path, media_type="image/svg+xml")
     return {"error": "Image not found"}, 404
+
+# ---- Mission Risk AI Endpoints ----
+
+class MissionParams(BaseModel):
+    duration_minutes: float
+    target_altitude: float
+    engine_load_pct: float
+
+class MissionAnalyzeRequest(BaseModel):
+    engine_state: dict
+    mission: MissionParams
+
+def build_mission_feature_dict(engine_state, mission):
+    # Extract features safely
+    health_idx = engine_state.get("health_index", 100.0)
+    return {
+        "health_index": health_idx,
+        "rul_hours": engine_state.get("rul_hours", 1800.0),
+        "degradation_rate": engine_state.get("degradation_rate", 0.0),
+        "anomaly_severity": engine_state.get("anomaly_score", 0.0) if health_idx < 90 else 0.0,
+        "egt_deviation": engine_state.get("residual_z", {}).get("egt", 0.0) * 15.0, # roughly un-standardizing
+        "cht_deviation": engine_state.get("residual_z", {}).get("cht", 0.0) * 10.0,
+        "oil_pressure_deviation": engine_state.get("residual_z", {}).get("oil_pressure", 0.0) * 5.0,
+        "vibration_deviation": engine_state.get("residual_z", {}).get("vibration", 0.0) * 0.5,
+        "mission_duration": mission.duration_minutes,
+        "mission_altitude": mission.target_altitude,
+        "engine_load": mission.engine_load_pct
+    }
+
+@app.post("/api/mission/analyze")
+def analyze_mission(req: MissionAnalyzeRequest):
+    if not mission_risk_model:
+        return {"error": "Mission model not trained"}
+        
+    f_dict = build_mission_feature_dict(req.engine_state, req.mission)
+    df = pd.DataFrame([f_dict], columns=mission_features)
+    
+    pred_idx = int(mission_risk_model.predict(df)[0])
+    probs = mission_risk_model.predict_proba(df)[0]
+    
+    labels = ["SAFE", "MODERATE", "HIGH", "CRITICAL"]
+    label = labels[pred_idx]
+    
+    # Simple top drivers logic from global importances
+    top_drivers = sorted(mission_importances.items(), key=lambda x: x[1], reverse=True)[:3]
+    drivers_out = [{"feature": k, "importance": v} for k, v in top_drivers]
+    
+    return {
+        "risk": label,
+        "risk_score": float(pred_idx) / 3.0, # Normalize to 0-1
+        "confidence": float(probs[pred_idx]),
+        "top_drivers": drivers_out
+    }
+
+class MissionWhatIfRequest(BaseModel):
+    engine_state: dict
+    original_mission: MissionParams
+    alternatives: List[MissionParams]
+
+@app.post("/api/mission/what-if")
+def what_if_mission(req: MissionWhatIfRequest):
+    scenarios = []
+    
+    # Process original
+    orig_params = {
+        "duration_minutes": req.original_mission.duration_minutes,
+        "altitude_m": req.original_mission.target_altitude,
+        "load_pct": req.original_mission.engine_load_pct
+    }
+    
+    orig_result = evaluate_mission_scenario(req.engine_state, orig_params)
+    
+    scenarios.append({
+        "label": "Original",
+        "params": orig_params,
+        "result": orig_result
+    })
+    
+    best_alt_label = None
+    best_score = orig_result["risk_score"]
+    
+    for i, alt in enumerate(req.alternatives):
+        alt_params = {
+            "duration_minutes": alt.duration_minutes,
+            "altitude_m": alt.target_altitude,
+            "load_pct": alt.engine_load_pct
+        }
+        
+        alt_result = evaluate_mission_scenario(req.engine_state, alt_params)
+        alt_name = f"Alternative {i+1}"
+        
+        scenarios.append({
+            "label": alt_name,
+            "params": alt_params,
+            "result": alt_result
+        })
+        
+        if alt_result["risk_score"] < best_score:
+            best_score = alt_result["risk_score"]
+            best_alt_label = alt_name
+            
+    return {
+        "scenarios": scenarios,
+        "best_alternative": best_alt_label
+    }
+
+@app.post("/api/mission/recommend")
+def recommend_mission(req: dict):
+    # Rule-based logic separated from the ML model
+    risk = req.get("risk", "SAFE")
+    load = req.get("mission", {}).get("engine_load_pct", 100)
+    
+    if risk == "CRITICAL":
+        return {
+            "action": "ABORT / RETURN TO BASE",
+            "reason": "Risk model indicates critical failure likelihood on this trajectory.",
+            "expected_effect": "CRITICAL -> SAFE"
+        }
+    elif risk == "HIGH":
+        if load > 75:
+            return {
+                "action": "REDUCE_LOAD",
+                "reason": "Engine load is high, increasing degradation risk. Reduce to 65%.",
+                "expected_effect": "HIGH -> MODERATE"
+            }
+        else:
+            return {
+                "action": "SHORTEN_MISSION",
+                "reason": "Mission duration exceeds safe RUL buffer. Consider RTB sooner.",
+                "expected_effect": "HIGH -> MODERATE"
+            }
+    elif risk == "MODERATE":
+        return {
+            "action": "MONITOR",
+            "reason": "Risk is elevated but within acceptable limits. Maintain steady telemetry.",
+            "expected_effect": "MODERATE -> MODERATE"
+        }
+        
+    return {
+        "action": "CONTINUE",
+        "reason": "Mission profile is safe given current engine health.",
+        "expected_effect": "SAFE -> SAFE"
+    }
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
