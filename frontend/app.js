@@ -1223,6 +1223,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     { label: "Duration (min)", key: "duration_minutes" },
                     { label: "Altitude (m)", key: "altitude_m" },
                     { label: "Load (%)", key: "load_pct" },
+                    { label: "Projected RUL", isProjectedRul: true },
                     { label: "Risk Level", isRisk: true },
                     { label: "Recommendation", isRec: true }
                 ];
@@ -1237,6 +1238,17 @@ document.addEventListener("DOMContentLoaded", () => {
                         
                         let val = '';
                         if (r.key) val = scen.params[r.key];
+                        else if (r.isProjectedRul) {
+                            const rulH = scen.result.operating_margin / 60;
+                            if (rulH <= 0) {
+                                val = `<span style="color: var(--status-critical);">0d 00h 00m</span>`;
+                            } else {
+                                const d = Math.floor(rulH / 24);
+                                const h = Math.floor(rulH % 24);
+                                const m = Math.floor((rulH * 60) % 60);
+                                val = `${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
+                            }
+                        }
                         else if (r.isRisk) {
                             val = scen.result.risk_level;
                             let color = "var(--status-healthy)";
