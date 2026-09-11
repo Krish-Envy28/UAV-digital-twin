@@ -1,15 +1,24 @@
 @echo off
+cd /d "%~dp0"
 echo ==================================================
 echo       UAV Digital Twin - Launching Demo...
 echo ==================================================
+
+IF NOT EXIST ".venv\Scripts\python.exe" (
+    echo.
+    echo [!] Virtual environment not found. Creating one now...
+    python -m venv .venv
+    echo [!] Installing requirements...
+    .venv\Scripts\pip.exe install -r requirements.txt
+)
 
 echo.
 echo [1] Starting Backend API Server in the background...
 start "UAV Backend Server" cmd /c ".venv\Scripts\python.exe -m uvicorn backend.api:app"
 
 echo.
-echo [2] Waiting for server to initialize (3 seconds)...
-timeout /t 3 /nobreak > NUL
+echo [2] Waiting for server to initialize (10 seconds)...
+timeout /t 10 /nobreak > NUL
 
 echo.
 echo [3] Opening Dashboard in your default web browser...

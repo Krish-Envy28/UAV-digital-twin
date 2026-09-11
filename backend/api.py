@@ -16,6 +16,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from ml.digital_twin import DigitalTwin
 from backend.residual import ResidualEngine
 from ml.phm_core import PHMCore
+from backend.event_manager import event_manager
+
 
 app = FastAPI(title="UAV Digital Twin - Phase 2 API")
 
@@ -93,6 +95,9 @@ async def receive_telemetry(data: TelemetryInput):
     # 3. PHM Core estimates health
     phm_result = phm.predict(rz, data.engine_hours)
     
+    # 4. Event Management (Process new anomalies)
+    event_manager.process_telemetry(raw_sample, rz, phm_result)
+    
     # Combine everything for the dashboard
     broadcast_data = {
         "timestamp": data.timestamp,
@@ -133,6 +138,25 @@ def set_speed(req: SpeedRequest):
     global global_speed_factor
     global_speed_factor = req.speed
     return {"status": "ok", "speed": global_speed_factor}
+
+@app.get("/api/events")
+def get_events():
+    return {"events": event_manager.get_events()}
+
+@app.get("/api/events/{event_id}")
+def get_event(event_id: str):
+    evt = event_manager.get_event(event_id)
+    if evt:
+        return evt
+    return {"error": "Event not found"}, 404
+
+from fastapi.responses import FileResponse
+@app.get("/api/events/{event_id}/image")
+def get_event_image(event_id: str):
+    image_path = Path(__file__).parent.parent / "data" / "events" / event_id / "snapshot.svg"
+    if image_path.exists():
+        return FileResponse(image_path, media_type="image/svg+xml")
+    return {"error": "Image not found"}, 404
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

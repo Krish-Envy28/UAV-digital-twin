@@ -51,6 +51,7 @@
                         <span data-tab="mission">Mission</span>
                         <span data-tab="what-if">What-If</span>
                         <span data-tab="recommendation">Recommendation</span>
+                        <span data-tab="events">Event History</span>
                     </div>
                     <div class="global-status">
                         <button class="top-btn" id="upload-btn" title="Upload CSV Data">
@@ -248,6 +249,76 @@
                         </div>
                         <div class="logs-body" id="logs-body">
                             <div class="log-line info">[SYSTEM] Awaiting telemetry link...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB: EVENT HISTORY (New Phase 5)             -->
+                <!-- ============================================ -->
+                <div class="tab-panel" id="tab-events">
+                    <div class="glass-panel" style="padding: 20px;">
+                        <div class="stat-header" style="margin-bottom: 20px;">
+                            <i class="ph-thin ph-clock-counter-clockwise"></i>
+                            <span>HISTORICAL ANOMALY EVENTS</span>
+                            <button id="refresh-events" style="margin-left: auto; background: none; border: 1px solid var(--accent); color: var(--accent); cursor: pointer; padding: 5px 10px; border-radius: 4px;">Refresh</button>
+                        </div>
+                        <div id="event-history-list" style="display: flex; flex-direction: column; gap: 15px; max-height: 70vh; overflow-y: auto;">
+                            <!-- Event items go here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EVENT DETAILS MODAL -->
+                <div id="event-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+                    <div class="glass-panel" style="width: 90%; max-width: 1200px; max-height: 90vh; overflow-y: auto; padding: 30px; position: relative; border-color: var(--status-critical);">
+                        <button id="close-event-modal" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+                            <div>
+                                <h2 id="modal-event-id" style="color: var(--status-critical); margin: 0;">EVT_----</h2>
+                                <div id="modal-event-time" style="color: rgba(255,255,255,0.5); font-family: 'JetBrains Mono'; font-size: 14px; margin-top: 5px;">Time: --</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <div id="modal-event-component" style="font-size: 18px; font-weight: bold; color: var(--status-critical);">--</div>
+                                <div id="modal-event-stage" style="color: var(--status-warning); font-size: 14px;">--</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 30px;">
+                            <!-- Left: Image -->
+                            <div style="flex: 2; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.5);">
+                                <img id="modal-event-image" src="" style="width: 100%; height: auto; display: block;" alt="Event Snapshot" />
+                            </div>
+
+                            <!-- Right: Details -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+                                <div class="glass-panel" style="padding: 15px;">
+                                    <h4 style="margin: 0 0 10px 0; color: var(--accent);">Anomaly Details</h4>
+                                    <div style="font-family: 'JetBrains Mono'; font-size: 13px; line-height: 1.6;">
+                                        <div><strong>Status:</strong> <span id="modal-event-status">--</span></div>
+                                        <div><strong>Anomaly Score:</strong> <span id="modal-event-score">--</span></div>
+                                        <div><strong>Residual Z-Score:</strong> <span id="modal-event-z">--</span></div>
+                                        <div><strong>Health Index:</strong> <span id="modal-event-hi">--</span>%</div>
+                                        <div><strong>RUL:</strong> <span id="modal-event-rul">--</span> H</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="glass-panel" style="padding: 15px;">
+                                    <h4 style="margin: 0 0 10px 0; color: var(--accent);">Captured Telemetry (12 Params)</h4>
+                                    <div id="modal-event-sensors" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: 'JetBrains Mono'; font-size: 12px;">
+                                        <!-- Sensors injected here -->
+                                    </div>
+                                </div>
+                                
+                                <button id="btn-view-json" style="padding: 10px; background: rgba(255,107,53,0.1); border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; cursor: pointer;">VIEW JSON</button>
+                            </div>
+                        </div>
+                        
+                        <!-- JSON View (hidden by default) -->
+                        <div id="modal-json-view" style="display: none; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;">
+                            <h4 style="margin: 0 0 10px 0; color: var(--accent);">event.json</h4>
+                            <pre id="modal-json-content" style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 4px; font-family: 'JetBrains Mono'; font-size: 12px; overflow-x: auto; color: #a6e22e;"></pre>
                         </div>
                     </div>
                 </div>

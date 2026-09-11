@@ -1,0 +1,46 @@
+{
+    "event_id": "EVT_0024",
+    "timestamp": "1970-01-01T05:31:20",
+    "recorded_at": "2026-09-11T09:24:16.889442",
+    "affected_components": [
+        {
+            "sensor_id": "oil_pressure",
+            "sensor_name": "Oil Sensor",
+            "z_score": 3.3922
+        }
+    ],
+    "affected_component": {
+        "sensor_id": "oil_pressure",
+        "sensor_name": "Oil Sensor",
+        "parameter": "oil_pressure",
+        "component": "Oil Sensor"
+    },
+    "anomaly": {
+        "detected": false,
+        "score": 0.7059,
+        "z_score": 3.3922
+    },
+    "health": {
+        "health_index": 89.36,
+        "rul": 723.76,
+        "degradation_stage": "healthy"
+    },
+    "sensor_data": {
+        "rpm": 4118.9,
+        "throttle": 81.2,
+        "map": 75.26,
+        "altitude": 3356.8,
+        "ambient_temp": 8.1,
+        "egt": 752.3,
+        "cht": 198.2,
+        "oil_pressure": 55.4,
+        "oil_temp": 92.8,
+        "vibration": 0.416,
+        "fuel_flow": 13.96,
+        "engine_hours": 119.1
+    },
+    "image": {
+        "snapshot": "snapshot.svg"
+    },
+    "event_status": "closed"
+}

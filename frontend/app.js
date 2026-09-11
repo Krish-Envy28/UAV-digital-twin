@@ -693,6 +693,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     activeAnimations[key] = true;
+                    
+                    // Add click handler
+                    const el = document.querySelector(id);
+                    if (el) {
+                        el.style.cursor = 'pointer';
+                        el.onclick = async () => {
+                            const res = await fetch("/api/events");
+                            const data = await res.json();
+                            if (data.events && data.events.length > 0) {
+                                openEventModal(data.events[0].event_id);
+                            }
+                        };
+                    }
                 }
             } else {
                 if (activeAnimations[key]) {
@@ -712,11 +725,115 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     activeAnimations[key] = false;
+                    
+                    // Remove click handler
+                    document.querySelector(id).style.cursor = 'default';
+                    document.querySelector(id).onclick = null;
                 }
             }
         }
     }
 
+
+    // ==========================================
+    // 9. EVENT HISTORY & MODAL (Phase 5)
+    // ==========================================
+    
+    async function fetchEvents() {
+        try {
+            const res = await fetch("/api/events");
+            const data = await res.json();
+            renderEventList(data.events || []);
+        } catch(e) {
+            console.error("Failed to fetch events", e);
+        }
+    }
+    
+    function renderEventList(events) {
+        const list = document.getElementById("event-history-list");
+        list.innerHTML = "";
+        
+        if (events.length === 0) {
+            list.innerHTML = "<div style='color: rgba(255,255,255,0.5);'>No historical events found.</div>";
+            return;
+        }
+        
+        events.forEach(evt => {
+            const el = document.createElement("div");
+            el.className = "glass-panel";
+            el.style.padding = "15px";
+            el.style.cursor = "pointer";
+            el.style.borderLeft = "4px solid var(--status-critical)";
+            
+            el.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="color: var(--status-critical); font-weight: bold; font-size: 16px;">${evt.event_id}</div>
+                        <div style="color: rgba(255,255,255,0.7); font-size: 13px; margin-top: 5px;">Affected: ${evt.affected_component.component || 'Unknown'}</div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: var(--status-warning); font-size: 12px;">Stage: ${evt.health.degradation_stage.toUpperCase()}</div>
+                        <div style="color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 5px;">${new Date(evt.recorded_at).toLocaleString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            el.onclick = () => openEventModal(evt.event_id);
+            list.appendChild(el);
+        });
+    }
+    
+    async function openEventModal(eventId) {
+        try {
+            const res = await fetch(`/api/events/${eventId}`);
+            if (!res.ok) throw new Error("Event not found");
+            const evt = await res.json();
+            
+            document.getElementById("modal-event-id").innerText = evt.event_id;
+            document.getElementById("modal-event-time").innerText = "Time: " + new Date(evt.recorded_at).toLocaleString();
+            document.getElementById("modal-event-component").innerText = evt.affected_component.component || 'Multiple Components';
+            document.getElementById("modal-event-stage").innerText = evt.health.degradation_stage.toUpperCase();
+            
+            document.getElementById("modal-event-status").innerText = evt.event_status.toUpperCase();
+            document.getElementById("modal-event-score").innerText = evt.anomaly.score.toFixed(3);
+            document.getElementById("modal-event-z").innerText = evt.anomaly.z_score.toFixed(2);
+            document.getElementById("modal-event-hi").innerText = evt.health.health_index.toFixed(1);
+            document.getElementById("modal-event-rul").innerText = evt.health.rul.toFixed(1);
+            
+            // Populate sensors
+            const sensorsDiv = document.getElementById("modal-event-sensors");
+            sensorsDiv.innerHTML = "";
+            for (const [key, val] of Object.entries(evt.sensor_data)) {
+                sensorsDiv.innerHTML += `<div><span style="color: rgba(255,255,255,0.5);">${key.toUpperCase()}:</span> ${typeof val === 'number' ? val.toFixed(2) : val}</div>`;
+            }
+            
+            // Image
+            document.getElementById("modal-event-image").src = `/api/events/${eventId}/image?t=${Date.now()}`;
+            
+            // JSON
+            window.currentEventJson = evt;
+            document.getElementById("modal-json-content").textContent = JSON.stringify(evt, null, 2);
+            document.getElementById("modal-json-view").style.display = "none";
+            
+            document.getElementById("event-modal").style.display = "flex";
+        } catch(e) {
+            console.error("Failed to load event details", e);
+        }
+    }
+    
+    document.getElementById("refresh-events")?.addEventListener("click", fetchEvents);
+    
+    document.getElementById("close-event-modal")?.addEventListener("click", () => {
+        document.getElementById("event-modal").style.display = "none";
+    });
+    
+    document.getElementById("btn-view-json")?.addEventListener("click", () => {
+        const view = document.getElementById("modal-json-view");
+        view.style.display = view.style.display === "none" ? "block" : "none";
+    });
+    
+    // Fetch initial events
+    setTimeout(fetchEvents, 1000);
 
     // ==========================================
     // 10. Health Value Color Shifting

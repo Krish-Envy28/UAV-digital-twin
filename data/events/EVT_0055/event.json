@@ -1,0 +1,46 @@
+{
+    "event_id": "EVT_0055",
+    "timestamp": "1970-01-01T05:34:40",
+    "recorded_at": "2026-09-11T10:19:41.693388",
+    "affected_components": [
+        {
+            "sensor_id": "vibration",
+            "sensor_name": "Vibration Sensor",
+            "z_score": 3.6576
+        }
+    ],
+    "affected_component": {
+        "sensor_id": "vibration",
+        "sensor_name": "Vibration Sensor",
+        "parameter": "vibration",
+        "component": "Vibration Sensor"
+    },
+    "anomaly": {
+        "detected": false,
+        "score": 0.757,
+        "z_score": 3.6576
+    },
+    "health": {
+        "health_index": 88.49,
+        "rul": 550.04,
+        "degradation_stage": "healthy"
+    },
+    "sensor_data": {
+        "rpm": 3404.4,
+        "throttle": 64.9,
+        "map": 52.07,
+        "altitude": 7996.9,
+        "ambient_temp": -1.1,
+        "egt": 685.9,
+        "cht": 182.0,
+        "oil_pressure": 48.8,
+        "oil_temp": 72.0,
+        "vibration": 0.481,
+        "fuel_flow": 11.4,
+        "engine_hours": 291.8
+    },
+    "image": {
+        "snapshot": "snapshot.svg"
+    },
+    "event_status": "closed"
+}
