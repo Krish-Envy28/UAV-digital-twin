@@ -486,12 +486,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const phm = data.phm;
         
         // --- Update Key Health Stats (Left Col) ---
-        animateNumberChange("val-health", phm.health_index, 1);
+        const rulH = phm.rul_hours;
+        const d = Math.floor(rulH / 24);
+        const h = Math.floor(rulH % 24);
+        const m = Math.floor((rulH * 60) % 60);
+        const formattedRul = `${d}d ${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
+        
+        document.getElementById("val-health").innerText = formattedRul;
         
         const stageStr = phm.degradation_stage.replace(/_/g, " ").toUpperCase();
         document.getElementById("val-stage").innerText = stageStr;
         
-        animateNumberChange("val-rul", phm.rul_hours, 1);
+        document.getElementById("val-rul").innerText = formattedRul;
         
         const confPct = (phm.stage_confidence * 100).toFixed(1);
         document.getElementById("val-confidence").innerText = confPct;
